@@ -454,10 +454,11 @@ function buildCatalog(category, content) {
   };
 }
 
-function buildGeneratedHtml({ place, category, tone, mode, styleVariant, gradientPreset }) {
+function buildGeneratedHtml({ place, category, tone, mode, styleVariant, gradientPreset, colorPalette = 'blue' }) {
   const content = CATEGORY_CONTENT[category] || CATEGORY_CONTENT.other;
   const theme = TONE_THEME[tone] || TONE_THEME.premium;
   const gradient = GRADIENT_PRESETS[gradientPreset] || GRADIENT_PRESETS.aurora;
+  const selectedPalette = COLOR_PALETTES[colorPalette] || COLOR_PALETTES.blue;
   const businessName = safeText(place.name || "Local Business");
   const city = safeText(place.city || "your city");
   const placeLine = safeText(place.full || `${place.name}, ${place.city}`);
@@ -607,10 +608,10 @@ function buildGeneratedHtml({ place, category, tone, mode, styleVariant, gradien
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&family=Manrope:wght@400;500;700;800&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --accent-a: ${theme.accentA};
-      --accent-b: ${theme.accentB};
-      --accent-soft: ${theme.accentSoft};
-      --accent-pop: ${theme.accentPop};
+      --accent-a: ${selectedPalette.accent};
+      --accent-b: ${selectedPalette.label};
+      --accent-soft: color-mix(in srgb, ${selectedPalette.accent} 12%, #fff);
+      --accent-pop: ${selectedPalette.accent};
       --bg-top: ${gradient.lightTop};
       --bg-mid: ${gradient.lightMid};
       --bg-bottom: ${gradient.lightBottom};
@@ -2010,6 +2011,16 @@ function buildGeneratedHtml({ place, category, tone, mode, styleVariant, gradien
 </html>`;
 }
 
+// PHASE 1: Color Palette System
+const COLOR_PALETTES = {
+  blue: { name: "Professional Blue", accent: "#2563eb", label: "#1e40af" },
+  green: { name: "Fresh Green", accent: "#059669", label: "#047857" },
+  purple: { name: "Elegant Purple", accent: "#7c3aed", label: "#6d28d9" },
+  orange: { name: "Energetic Orange", accent: "#ea580c", label: "#c2410c" },
+  red: { name: "Bold Red", accent: "#dc2626", label: "#991b1b" },
+  teal: { name: "Modern Teal", accent: "#0891b2", label: "#0e7490" }
+};
+
 export default function Home() {
   const [rawPlace, setRawPlace] = useState(SAMPLE_LOCATION);
   const [category, setCategory] = useState("dentist");
@@ -2018,6 +2029,12 @@ export default function Home() {
   const [styleVariant, setStyleVariant] = useState("studio");
   const [gradientPreset, setGradientPreset] = useState("ocean");
   const [error, setError] = useState("");
+  
+  // PHASE 1: State for new features
+  const [devicePreview, setDevicePreview] = useState("desktop"); // desktop, tablet, mobile
+  const [colorPalette, setColorPalette] = useState("blue");
+  const [heroImage, setHeroImage] = useState(null);
+  const [galleryImages, setGalleryImages] = useState([]);
 
   useEffect(() => {
     document.body.dataset.mode = mode;
@@ -2036,9 +2053,10 @@ export default function Home() {
       tone,
       mode,
       styleVariant,
-      gradientPreset
+      gradientPreset,
+      colorPalette
     });
-  }, [parsedPlace, category, tone, mode, styleVariant, gradientPreset]);
+  }, [parsedPlace, category, tone, mode, styleVariant, gradientPreset, colorPalette]);
 
   const previewSrc = useMemo(() => {
     if (!generatedHtml) return "";
@@ -2144,33 +2162,130 @@ export default function Home() {
           </div>
         </div>
 
-        {/* STYLE & APPEARANCE */}
-        <div className="row">
-          <div>
-            <label htmlFor="styleVariant" style={{ marginTop: "14px" }}>Style</label>
-            <select
-              id="styleVariant"
-              value={styleVariant}
-              onChange={(event) => setStyleVariant(event.target.value)}
-            >
-              <option value="studio">Studio</option>
-              <option value="bold">Bold</option>
-              <option value="minimal">Minimal</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="gradientPreset" style={{ marginTop: "14px" }}>Gradient</label>
-            <select
-              id="gradientPreset"
-              value={gradientPreset}
-              onChange={(event) => setGradientPreset(event.target.value)}
-            >
-              {Object.entries(GRADIENT_PRESETS).map(([key, preset]) => (
-                <option key={key} value={key}>{preset.label}</option>
-              ))}
-            </select>
-          </div>
+        {/* DEVICE PREVIEW SWITCHER - PHASE 1 */}
+        <div className="section-divider"></div>
+        <label style={{ marginTop: "20px" }}>📱 Preview Mode</label>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px", marginBottom: "18px" }}>
+          <button
+            type="button"
+            onClick={() => setDevicePreview("mobile")}
+            style={{
+              padding: "10px 12px",
+              borderRadius: "8px",
+              border: devicePreview === "mobile" ? "2px solid var(--brand)" : "1px solid var(--line)",
+              background: devicePreview === "mobile" ? "var(--brand-light)" : "var(--secondary-bg)",
+              color: devicePreview === "mobile" ? "var(--brand-dark)" : "var(--ink)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}
+          >
+            📱 Mobile
+          </button>
+          <button
+            type="button"
+            onClick={() => setDevicePreview("tablet")}
+            style={{
+              padding: "10px 12px",
+              borderRadius: "8px",
+              border: devicePreview === "tablet" ? "2px solid var(--brand)" : "1px solid var(--line)",
+              background: devicePreview === "tablet" ? "var(--brand-light)" : "var(--secondary-bg)",
+              color: devicePreview === "tablet" ? "var(--brand-dark)" : "var(--ink)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}
+          >
+            📲 Tablet
+          </button>
+          <button
+            type="button"
+            onClick={() => setDevicePreview("desktop")}
+            style={{
+              padding: "10px 12px",
+              borderRadius: "8px",
+              border: devicePreview === "desktop" ? "2px solid var(--brand)" : "1px solid var(--line)",
+              background: devicePreview === "desktop" ? "var(--brand-light)" : "var(--secondary-bg)",
+              color: devicePreview === "desktop" ? "var(--brand-dark)" : "var(--ink)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}
+          >
+            🖥️ Desktop
+          </button>
         </div>
+
+        {/* COLOR PALETTE PICKER - PHASE 1 */}
+        <label style={{ marginTop: "14px" }}>🎨 Accent Color</label>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px", marginBottom: "18px" }}>
+          {Object.entries(COLOR_PALETTES).map(([key, palette]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setColorPalette(key)}
+              title={palette.name}
+              style={{
+                width: "100%",
+                height: "44px",
+                borderRadius: "8px",
+                border: colorPalette === key ? "3px solid var(--ink)" : "2px solid var(--line-light)",
+                background: palette.accent,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: colorPalette === key ? "0 4px 12px rgba(0,0,0,0.2)" : "none",
+                position: "relative"
+              }}
+            >
+              {colorPalette === key && (
+                <span style={{ color: "#fff", fontSize: "1.2rem", position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  ✓
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* IMAGE UPLOADS - PHASE 1 */}
+        <label style={{ marginTop: "14px" }}>🖼️ Hero Image</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => setHeroImage(event.target?.result);
+              reader.readAsDataURL(file);
+            }
+          }}
+          style={{ marginTop: "8px" }}
+        />
+        {heroImage && <p className="hint">✅ Hero image uploaded</p>}
+
+        <label style={{ marginTop: "14px" }}>📸 Gallery Images</label>
+        <input
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={(e) => {
+            const files = Array.from(e.target.files || []);
+            const promises = files.slice(0, 3).map(
+              (file) =>
+                new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onload = (event) => resolve(event.target?.result);
+                  reader.readAsDataURL(file);
+                })
+            );
+            Promise.all(promises).then((images) => setGalleryImages(images));
+          }}
+          style={{ marginTop: "8px" }}
+        />
+        {galleryImages.length > 0 && <p className="hint">✅ {galleryImages.length} images uploaded (max 3)</p>}
 
         <label htmlFor="mode" style={{ marginTop: "14px" }}>Theme</label>
         <select id="mode" value={mode} onChange={(event) => setMode(event.target.value)}>
@@ -2218,8 +2333,26 @@ export default function Home() {
             <span>{statusText}</span>
           </span>
         </div>
-        <iframe title="Generated Website Preview" src={previewSrc} />
-        <p className="note">💡 Fully responsive. No API key needed—all generation happens in your browser. Ready to integrate live data in production.</p>
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          padding: "12px",
+          background: "var(--secondary-bg)",
+          borderRadius: "var(--radius)",
+          overflow: "auto"
+        }}>
+          <div style={{
+            width: devicePreview === "mobile" ? "375px" : devicePreview === "tablet" ? "768px" : "100%",
+            maxWidth: "100%",
+            border: devicePreview !== "desktop" ? "1px solid var(--line)" : "none",
+            borderRadius: "8px",
+            overflow: "hidden",
+            background: "#fff"
+          }}>
+            <iframe title="Generated Website Preview" src={previewSrc} style={{ height: "900px", borderRadius: devicePreview !== "desktop" ? "8px" : "0" }} />
+          </div>
+        </div>
+        <p className="note">💡 Responsive preview. Switch between mobile, tablet, and desktop views. No API key needed—all generation happens in your browser.</p>
       </section>
     </div>
   );
